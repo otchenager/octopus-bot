@@ -137,11 +137,14 @@ class TonVpnClient {
     console.log('Страна:', country, '→', countryBtn)
     console.log('Период:', period, '→', periodBtn)
 
-    // /start → TON VPN sends TWO messages (welcome + keyboard menu), consume both
+    // /start → welcome message only; send any text to trigger the keyboard menu
     console.log('\n[ШАГ 1] Отправляем /start')
     await this.sendMessage('/start')
-    await this.waitForMessage()
     let msg = await this.waitForMessage()
+    console.log('[ШАГ 1] Приветствие получено:', msg.text?.slice(0, 60))
+    await this.sleep(500)
+    await this.sendMessage('Привет')
+    msg = await this.waitForMessage()
     console.log('[ШАГ 1] Меню получено. Кнопки:', this.getButtons(msg))
 
     // ReplyKeyboard: "click" = send exact button text

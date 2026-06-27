@@ -7,13 +7,13 @@ const prisma = new PrismaClient({
     }
   }
 })
-const USD_TO_RUB = 92
+const USD_TO_RUB = 77
 
 async function getOrCreateUser(telegramId, username) {
   return prisma.user.upsert({
     where: { telegramId: BigInt(telegramId) },
     update: {},
-    create: { telegramId: BigInt(telegramId), username: username || null, balance: 0.52 },
+    create: { telegramId: BigInt(telegramId), username: username || null, balance: 0.54 },
   })
 }
 

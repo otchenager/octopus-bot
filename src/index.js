@@ -248,7 +248,11 @@ bot.action('confirm_payment', async (ctx) => {
     )
   }
 
-  await ctx.editMessageText('⏳ Получаем ваш ключ...')
+  const countdownMsg = await ctx.reply('⏳ Получаем ваш ключ... 25')
+  for (let i = 24; i >= 1; i--) {
+    await new Promise(r => setTimeout(r, 1000))
+    await ctx.telegram.editMessageText(ctx.chat.id, countdownMsg.message_id, null, '⏳ Получаем ваш ключ... ' + i)
+  }
 
   try {
     const updatedUser = await deductBalance(ctx.from.id, price)
@@ -269,7 +273,8 @@ bot.action('confirm_payment', async (ctx) => {
     }
 
     const remaining = updatedUser.balance
-    await ctx.editMessageText(
+    await ctx.telegram.editMessageText(
+      ctx.chat.id, countdownMsg.message_id, null,
       `✅ *Ваш ключ активирован!*\n\n` +
       `Страна: ${country}\n` +
       `Срок: ${plan.label}\n` +
@@ -284,7 +289,8 @@ bot.action('confirm_payment', async (ctx) => {
 
   } catch (err) {
     console.error('Key error:', err)
-    await ctx.editMessageText(
+    await ctx.telegram.editMessageText(
+      ctx.chat.id, countdownMsg.message_id, null,
       '❌ Ошибка при получении ключа. Обратитесь в поддержку: @octopus\\_support',
       { parse_mode: 'Markdown' }
     )
