@@ -95,36 +95,28 @@ class TonVpnClient {
     })
   }
 
+  // Returns a promise that resolves with TON VPN's response message.
+  // waitForMessage() is registered BEFORE clicking to avoid the race condition
+  // where the bot responds while msg.click() is still awaiting getBotCallbackAnswer.
   async clickInlineButton(msg, buttonText) {
     const rows = msg.replyMarkup?.rows || []
 
     console.log('  [BUTTONS AVAILABLE]:')
-    for (const row of rows) {
-      for (const btn of row.buttons) {
-        console.log(`    "${btn.text}" | data type: ${typeof btn.data} | data: ${JSON.stringify(btn.data)}`)
+    for (let i = 0; i < rows.length; i++) {
+      for (let j = 0; j < rows[i].buttons.length; j++) {
+        const btn = rows[i].buttons[j]
+        console.log(`    [${i}][${j}] "${btn.text}" | data: ${JSON.stringify(btn.data)}`)
       }
     }
 
-    for (const row of rows) {
-      for (const btn of row.buttons) {
+    for (let i = 0; i < rows.length; i++) {
+      for (let j = 0; j < rows[i].buttons.length; j++) {
+        const btn = rows[i].buttons[j]
         if (btn.text?.includes(buttonText)) {
-          console.log(`  [CLICK] Found: "${btn.text}"`)
-
-          if (btn.data && btn.data.length > 0) {
-            console.log('  [CLICK] Clicking by Buffer data')
-            await msg.click({ data: btn.data })
-          } else {
-            console.log('  [CLICK] No data, fallback to text click')
-            try {
-              await msg.click({ text: btn.text })
-            } catch (e) {
-              console.log('  [CLICK] Text click failed, fallback to sendMessage')
-              await this.sendMessage(btn.text)
-            }
-          }
-
-          await this.sleep(500)
-          return
+          console.log(`  [CLICK] Found: "${btn.text}" at [${i}][${j}] — registering handler then clicking`)
+          const responsePromise = this.waitForMessage()
+          await msg.click(i, j)
+          return responsePromise
         }
       }
     }
@@ -191,54 +183,41 @@ class TonVpnClient {
     msg = await this.waitForMessage()
     console.log('[ШАГ 3] TON VPN ответил:', msg.text?.slice(0, 80))
 
-    // Steps 4-8: inline buttons — click by Buffer data
+    // Steps 4-8: inline buttons — handler registered before click to avoid race condition
     await this.sleep(800)
-    console.log('\n[ШАГ 4] clickInlineButton: "' + BTN.RUSSIA_RESIDENT + '"')
-    await this.clickInlineButton(msg, 'Для жителей России')
-    msg = await this.waitForMessage()
+    console.log('\n[ШАГ 4] clickInlineButton: "Для жителей России"')
+    msg = await this.clickInlineButton(msg, 'Для жителей России')
     console.log('[ШАГ 4] TON VPN ответил:', msg.text?.slice(0, 80))
 
     await this.sleep(800)
     console.log('\n[ШАГ 5] clickInlineButton: "' + BTN.OUTLINE + '"')
-    await this.clickInlineButton(msg, BTN.OUTLINE)
-    msg = await this.waitForMessage()
+    msg = await this.clickInlineButton(msg, BTN.OUTLINE)
     console.log('[ШАГ 5] TON VPN ответил:', msg.text?.slice(0, 80))
 
     await this.sleep(800)
     console.log('\n[ШАГ 6] clickInlineButton: "' + BTN.UDP + '"')
-    await this.clickInlineButton(msg, BTN.UDP)
-    msg = await this.waitForMessage()
+    msg = await this.clickInlineButton(msg, BTN.UDP)
     console.log('[ШАГ 6] TON VPN ответил:', msg.text?.slice(0, 80))
 
     await this.sleep(800)
     console.log('\n[ШАГ 7] clickInlineButton: "' + countryBtn + '"')
-    await this.clickInlineButton(msg, countryBtn)
-    msg = await this.waitForMessage()
+    msg = await this.clickInlineButton(msg, countryBtn)
     console.log('[ШАГ 7] TON VPN ответил:', msg.text?.slice(0, 80))
 
     await this.sleep(800)
     console.log('\n[ШАГ 8] clickInlineButton: "' + periodBtn + '"')
-    await this.clickInlineButton(msg, periodBtn)
-    msg = await this.waitForMessage()
+    msg = await this.clickInlineButton(msg, periodBtn)
     console.log('[ШАГ 8] TON VPN ответил:', msg.text?.slice(0, 80))
 
-    // Step 9: traffic — click first available option by Buffer data (price varies by period)
-    const rows = msg.replyMarkup?.rows || []
-    const trafficBtns = rows.flatMap(r => r.buttons)
+    // Step 9: traffic — first available option, pre-register handler before click
+    const trafficRows = msg.replyMarkup?.rows || []
+    const trafficBtns = trafficRows.flatMap(r => r.buttons)
     console.log('\n[ШАГ 9] Доступные варианты трафика:', trafficBtns.map(b => b.text))
     if (!trafficBtns.length) throw new Error('No traffic buttons in: ' + (msg.text || ''))
-
-    const trafficBtn = trafficBtns[0]
-    console.log('[ШАГ 9] Выбираем: "' + trafficBtn.text + '"')
-    if (trafficBtn.data && trafficBtn.data.length > 0) {
-      console.log('[ШАГ 9] Clicking by Buffer data')
-      await msg.click({ data: trafficBtn.data })
-    } else {
-      console.log('[ШАГ 9] No data, clicking by text')
-      await msg.click({ text: trafficBtn.text })
-    }
-    await this.sleep(500)
-    msg = await this.waitForMessage()
+    console.log('[ШАГ 9] Выбираем: "' + trafficBtns[0].text + '"')
+    const waitStep9 = this.waitForMessage()
+    await msg.click(0, 0)
+    msg = await waitStep9
     const text = msg.text || msg.message || ''
     console.log('[ШАГ 9] TON VPN ответил:', text)
 
