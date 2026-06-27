@@ -8,7 +8,7 @@ const TON_VPN_BOT = '@TonVPN_bot'
 const BOT_USERNAME = 'tonvpn_bot'
 
 const BTN = {
-  REGISTER: 'Регистрация нового пользователя',
+  REGISTER: '🧞‍♂️Регистрация нового пользователя',
   RUSSIA_RESIDENT: 'Для жителей России',
   OUTLINE: 'Outline',
   UDP: 'UDP',
@@ -133,57 +133,56 @@ class TonVpnClient {
     console.log('Страна:', country, '→', countryBtn)
     console.log('Период:', period, '→', periodBtn)
 
-    // Шаг 1: регистрация
+    // /start → TON VPN sends TWO messages (welcome + keyboard menu), consume both
     console.log('\n[ШАГ 1] Отправляем /start')
     await this.sendMessage('/start')
-    await this.sleep(2000)
-    console.log('[ШАГ 1] Нажимаем: "' + BTN.REGISTER + '"')
-    await this.sendMessage(BTN.REGISTER)
+    await this.waitForMessage()
     let msg = await this.waitForMessage()
-    console.log('[ШАГ 1] TON VPN ответил:', msg.text || msg.message)
-    console.log('[ШАГ 1] Кнопки:', this.getButtons(msg))
+    console.log('[ШАГ 1] Меню получено. Кнопки:', this.getButtons(msg))
 
-    // Шаг 2: страна проживания — всегда "Для жителей России"
-    console.log('\n[ШАГ 2] Нажимаем: "' + BTN.RUSSIA_RESIDENT + '"')
-    await this.clickButton(msg, BTN.RUSSIA_RESIDENT)
+    // ReplyKeyboard: "click" = send exact button text
+    await this.sleep(500)
+    console.log('\n[ШАГ 2] Отправляем: "' + BTN.REGISTER + '"')
+    await this.sendMessage(BTN.REGISTER)
     msg = await this.waitForMessage()
     console.log('[ШАГ 2] TON VPN ответил:', msg.text || msg.message)
-    console.log('[ШАГ 2] Кнопки:', this.getButtons(msg))
 
-    // Шаг 3: протокол — Outline
-    console.log('\n[ШАГ 3] Нажимаем: "' + BTN.OUTLINE + '"')
-    await this.clickButton(msg, BTN.OUTLINE)
+    await this.sleep(500)
+    console.log('\n[ШАГ 3] Отправляем: "' + BTN.RUSSIA_RESIDENT + '"')
+    await this.sendMessage(BTN.RUSSIA_RESIDENT)
     msg = await this.waitForMessage()
     console.log('[ШАГ 3] TON VPN ответил:', msg.text || msg.message)
-    console.log('[ШАГ 3] Кнопки:', this.getButtons(msg))
 
-    // Шаг 4: порт — UDP
-    console.log('\n[ШАГ 4] Нажимаем: "' + BTN.UDP + '"')
-    await this.clickButton(msg, BTN.UDP)
+    await this.sleep(500)
+    console.log('\n[ШАГ 4] Отправляем: "' + BTN.OUTLINE + '"')
+    await this.sendMessage(BTN.OUTLINE)
     msg = await this.waitForMessage()
     console.log('[ШАГ 4] TON VPN ответил:', msg.text || msg.message)
-    console.log('[ШАГ 4] Кнопки:', this.getButtons(msg))
 
-    // Шаг 5: страна сервера
-    console.log('\n[ШАГ 5] Нажимаем: "' + countryBtn + '"')
-    await this.clickButton(msg, countryBtn)
+    await this.sleep(500)
+    console.log('\n[ШАГ 5] Отправляем: "' + BTN.UDP + '"')
+    await this.sendMessage(BTN.UDP)
     msg = await this.waitForMessage()
     console.log('[ШАГ 5] TON VPN ответил:', msg.text || msg.message)
-    console.log('[ШАГ 5] Кнопки:', this.getButtons(msg))
 
-    // Шаг 6: срок
-    console.log('\n[ШАГ 6] Нажимаем: "' + periodBtn + '"')
-    await this.clickButton(msg, periodBtn)
+    await this.sleep(500)
+    console.log('\n[ШАГ 6] Отправляем: "' + countryBtn + '"')
+    await this.sendMessage(countryBtn)
     msg = await this.waitForMessage()
     console.log('[ШАГ 6] TON VPN ответил:', msg.text || msg.message)
-    console.log('[ШАГ 6] Кнопки:', this.getButtons(msg))
 
-    // Шаг 7: трафик — 50 ГБ
-    console.log('\n[ШАГ 7] Нажимаем: "' + BTN.GB_50 + '"')
-    await this.clickButton(msg, BTN.GB_50)
+    await this.sleep(500)
+    console.log('\n[ШАГ 7] Отправляем: "' + periodBtn + '"')
+    await this.sendMessage(periodBtn)
+    msg = await this.waitForMessage()
+    console.log('[ШАГ 7] TON VPN ответил:', msg.text || msg.message)
+
+    await this.sleep(500)
+    console.log('\n[ШАГ 8] Отправляем: "' + BTN.GB_50 + '"')
+    await this.sendMessage(BTN.GB_50)
     msg = await this.waitForMessage()
     const text = msg.text || msg.message || ''
-    console.log('[ШАГ 7] TON VPN ответил:', text)
+    console.log('[ШАГ 8] TON VPN ответил:', text)
 
     const ssconfKey = this.extractKey(text)
     console.log('\n[РЕЗУЛЬТАТ] Ключ:', ssconfKey)
