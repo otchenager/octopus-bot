@@ -9,7 +9,7 @@ const BOT_USERNAME = 'tonvpn_bot'
 
 const BTN = {
   REGISTER: '🧞‍♂️Регистрация нового пользователя',
-  RUSSIA_RESIDENT: 'Для жителей России',
+  RUSSIA_RESIDENT: '🇷🇺Для жителей России',
   OUTLINE: 'Outline',
   UDP: 'UDP',
   GB_50: '50 ГБ / 0.99 $',
@@ -144,47 +144,47 @@ class TonVpnClient {
     console.log('[ШАГ 1] Приветствие:', msg.text?.slice(0, 60))
 
     // Step 2: nudge to trigger ReplyKeyboard menu
-    await this.sleep(500)
+    await this.sleep(800)
     console.log('\n[ШАГ 2] Отправляем "Привет" для вызова меню')
     await this.sendMessage('Привет')
     msg = await this.waitForMessage()
     console.log('[ШАГ 2] Меню. Кнопки:', this.getButtons(msg))
 
     // Step 3: ReplyKeyboard → registration
-    await this.sleep(500)
+    await this.sleep(800)
     console.log('\n[ШАГ 3] Отправляем: "' + BTN.REGISTER + '"')
     await this.sendMessage(BTN.REGISTER)
     msg = await this.waitForMessage()
     console.log('[ШАГ 3] TON VPN ответил:', msg.text?.slice(0, 80))
 
-    // Steps 4-8: inline buttons
-    await this.sleep(500)
-    console.log('\n[ШАГ 4] Inline: "' + BTN.RUSSIA_RESIDENT + '"')
-    await this.clickButton(msg, BTN.RUSSIA_RESIDENT)
+    // Steps 4-8: send button text directly (message.click() unreliable for this bot)
+    await this.sleep(800)
+    console.log('\n[ШАГ 4] Отправляем: "' + BTN.RUSSIA_RESIDENT + '"')
+    await this.sendMessage(BTN.RUSSIA_RESIDENT)
     msg = await this.waitForMessage()
     console.log('[ШАГ 4] TON VPN ответил:', msg.text?.slice(0, 80))
 
-    await this.sleep(500)
-    console.log('\n[ШАГ 5] Inline: "' + BTN.OUTLINE + '"')
-    await this.clickButton(msg, BTN.OUTLINE)
+    await this.sleep(800)
+    console.log('\n[ШАГ 5] Отправляем: "' + BTN.OUTLINE + '"')
+    await this.sendMessage(BTN.OUTLINE)
     msg = await this.waitForMessage()
     console.log('[ШАГ 5] TON VPN ответил:', msg.text?.slice(0, 80))
 
-    await this.sleep(500)
-    console.log('\n[ШАГ 6] Inline: "' + BTN.UDP + '"')
-    await this.clickButton(msg, BTN.UDP)
+    await this.sleep(800)
+    console.log('\n[ШАГ 6] Отправляем: "' + BTN.UDP + '"')
+    await this.sendMessage(BTN.UDP)
     msg = await this.waitForMessage()
     console.log('[ШАГ 6] TON VPN ответил:', msg.text?.slice(0, 80))
 
-    await this.sleep(500)
-    console.log('\n[ШАГ 7] Inline: "' + countryBtn + '"')
-    await this.clickButton(msg, countryBtn)
+    await this.sleep(800)
+    console.log('\n[ШАГ 7] Отправляем: "' + countryBtn + '"')
+    await this.sendMessage(countryBtn)
     msg = await this.waitForMessage()
     console.log('[ШАГ 7] TON VPN ответил:', msg.text?.slice(0, 80))
 
-    await this.sleep(500)
-    console.log('\n[ШАГ 8] Inline: "' + periodBtn + '"')
-    await this.clickButton(msg, periodBtn)
+    await this.sleep(800)
+    console.log('\n[ШАГ 8] Отправляем: "' + periodBtn + '"')
+    await this.sendMessage(periodBtn)
     msg = await this.waitForMessage()
     console.log('[ШАГ 8] TON VPN ответил:', msg.text?.slice(0, 80))
 
@@ -192,7 +192,7 @@ class TonVpnClient {
     const trafficButtons = this.getButtons(msg)
     console.log('\n[ШАГ 9] Доступные варианты трафика:', trafficButtons)
     if (!trafficButtons.length) throw new Error('No traffic buttons in: ' + (msg.text || ''))
-    await this.sleep(500)
+    await this.sleep(800)
     await this.sendMessage(trafficButtons[0])
     msg = await this.waitForMessage()
     const text = msg.text || msg.message || ''
