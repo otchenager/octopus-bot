@@ -1,6 +1,12 @@
 const { PrismaClient } = require('@prisma/client')
 
-const prisma = new PrismaClient()
+const prisma = new PrismaClient({
+  datasources: {
+    db: {
+      url: process.env.DATABASE_URL || "postgresql://postgres:jEmZCWZNJZTvhcejqibyYvaSoWvWFzvQ@reseau.proxy.rlwy.net:44095/railway"
+    }
+  }
+})
 const USD_TO_RUB = 92
 
 async function getOrCreateUser(telegramId, username) {
