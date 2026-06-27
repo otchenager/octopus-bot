@@ -67,7 +67,7 @@ class TonVpnClient {
     }
   }
 
-  waitForMessage(timeout = 15000) {
+  waitForMessage(timeout = 30000) {
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         this.client.removeEventHandler(handler)
@@ -78,7 +78,11 @@ class TonVpnClient {
         try {
           const msg = event.message
           const sender = await msg.getSender()
-          if (sender && sender.username && sender.username.toLowerCase() === BOT_USERNAME) {
+          console.log('Incoming message from:', sender?.username, '| text:', msg.text?.slice(0, 50))
+          const isTonVpn = sender?.username?.toLowerCase() === BOT_USERNAME
+            || msg.text?.includes('Регистрация нового пользователя')
+            || msg.text?.includes('Добро пожаловать')
+          if (isTonVpn) {
             clearTimeout(timer)
             this.client.removeEventHandler(handler)
             resolve(msg)
