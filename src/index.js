@@ -249,14 +249,24 @@ bot.action('confirm_payment', async (ctx) => {
   }
 
   const countdownMsg = await ctx.reply('⏳ Получаем ваш ключ... 25')
-  for (let i = 24; i >= 1; i--) {
-    await new Promise(r => setTimeout(r, 1000))
-    await ctx.telegram.editMessageText(ctx.chat.id, countdownMsg.message_id, null, '⏳ Получаем ваш ключ... ' + i)
-  }
+  let countdownDone = false
+
+  // Countdown runs in parallel with key fetch; stops as soon as result is ready
+  const countdown = (async () => {
+    for (let i = 24; i >= 1; i--) {
+      if (countdownDone) break
+      await new Promise(r => setTimeout(r, 1000))
+      if (countdownDone) break
+      try {
+        await ctx.telegram.editMessageText(ctx.chat.id, countdownMsg.message_id, null, '⏳ Получаем ваш ключ... ' + i)
+      } catch (_) {}
+    }
+  })()
 
   try {
     const updatedUser = await deductBalance(ctx.from.id, price)
     const ssconfKey = await tonvpn.getKey(country, period)
+    countdownDone = true
 
     let finalKey
     let appName
@@ -288,6 +298,7 @@ bot.action('confirm_payment', async (ctx) => {
     delete sessions[ctx.from.id]
 
   } catch (err) {
+    countdownDone = true
     console.error('Key error:', err)
     await ctx.telegram.editMessageText(
       ctx.chat.id, countdownMsg.message_id, null,

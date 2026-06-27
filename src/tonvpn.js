@@ -137,59 +137,66 @@ class TonVpnClient {
     console.log('Страна:', country, '→', countryBtn)
     console.log('Период:', period, '→', periodBtn)
 
-    // /start → welcome message only; send any text to trigger the keyboard menu
+    // Step 1: /start → welcome text only
     console.log('\n[ШАГ 1] Отправляем /start')
     await this.sendMessage('/start')
     let msg = await this.waitForMessage()
-    console.log('[ШАГ 1] Приветствие получено:', msg.text?.slice(0, 60))
+    console.log('[ШАГ 1] Приветствие:', msg.text?.slice(0, 60))
+
+    // Step 2: nudge to trigger ReplyKeyboard menu
     await this.sleep(500)
+    console.log('\n[ШАГ 2] Отправляем "Привет" для вызова меню')
     await this.sendMessage('Привет')
     msg = await this.waitForMessage()
-    console.log('[ШАГ 1] Меню получено. Кнопки:', this.getButtons(msg))
+    console.log('[ШАГ 2] Меню. Кнопки:', this.getButtons(msg))
 
-    // ReplyKeyboard: "click" = send exact button text
+    // Step 3: ReplyKeyboard → registration
     await this.sleep(500)
-    console.log('\n[ШАГ 2] Отправляем: "' + BTN.REGISTER + '"')
+    console.log('\n[ШАГ 3] Отправляем: "' + BTN.REGISTER + '"')
     await this.sendMessage(BTN.REGISTER)
     msg = await this.waitForMessage()
-    console.log('[ШАГ 2] TON VPN ответил:', msg.text || msg.message)
+    console.log('[ШАГ 3] TON VPN ответил:', msg.text?.slice(0, 80))
 
+    // Steps 4-8: inline buttons
     await this.sleep(500)
-    console.log('\n[ШАГ 3] Отправляем: "' + BTN.RUSSIA_RESIDENT + '"')
-    await this.sendMessage(BTN.RUSSIA_RESIDENT)
+    console.log('\n[ШАГ 4] Inline: "' + BTN.RUSSIA_RESIDENT + '"')
+    await this.clickButton(msg, BTN.RUSSIA_RESIDENT)
     msg = await this.waitForMessage()
-    console.log('[ШАГ 3] TON VPN ответил:', msg.text || msg.message)
+    console.log('[ШАГ 4] TON VPN ответил:', msg.text?.slice(0, 80))
 
     await this.sleep(500)
-    console.log('\n[ШАГ 4] Отправляем: "' + BTN.OUTLINE + '"')
-    await this.sendMessage(BTN.OUTLINE)
+    console.log('\n[ШАГ 5] Inline: "' + BTN.OUTLINE + '"')
+    await this.clickButton(msg, BTN.OUTLINE)
     msg = await this.waitForMessage()
-    console.log('[ШАГ 4] TON VPN ответил:', msg.text || msg.message)
+    console.log('[ШАГ 5] TON VPN ответил:', msg.text?.slice(0, 80))
 
     await this.sleep(500)
-    console.log('\n[ШАГ 5] Отправляем: "' + BTN.UDP + '"')
-    await this.sendMessage(BTN.UDP)
+    console.log('\n[ШАГ 6] Inline: "' + BTN.UDP + '"')
+    await this.clickButton(msg, BTN.UDP)
     msg = await this.waitForMessage()
-    console.log('[ШАГ 5] TON VPN ответил:', msg.text || msg.message)
+    console.log('[ШАГ 6] TON VPN ответил:', msg.text?.slice(0, 80))
 
     await this.sleep(500)
-    console.log('\n[ШАГ 6] Отправляем: "' + countryBtn + '"')
-    await this.sendMessage(countryBtn)
+    console.log('\n[ШАГ 7] Inline: "' + countryBtn + '"')
+    await this.clickButton(msg, countryBtn)
     msg = await this.waitForMessage()
-    console.log('[ШАГ 6] TON VPN ответил:', msg.text || msg.message)
+    console.log('[ШАГ 7] TON VPN ответил:', msg.text?.slice(0, 80))
 
     await this.sleep(500)
-    console.log('\n[ШАГ 7] Отправляем: "' + periodBtn + '"')
-    await this.sendMessage(periodBtn)
+    console.log('\n[ШАГ 8] Inline: "' + periodBtn + '"')
+    await this.clickButton(msg, periodBtn)
     msg = await this.waitForMessage()
-    console.log('[ШАГ 7] TON VPN ответил:', msg.text || msg.message)
+    console.log('[ШАГ 8] TON VPN ответил:', msg.text?.slice(0, 80))
 
+    // Step 9: traffic — pick first available option (price varies by period)
+    const trafficButtons = this.getButtons(msg)
+    console.log('\n[ШАГ 9] Доступные варианты трафика:', trafficButtons)
+    if (!trafficButtons.length) throw new Error('No traffic buttons in: ' + (msg.text || ''))
     await this.sleep(500)
-    console.log('\n[ШАГ 8] Отправляем: "' + BTN.GB_50 + '"')
-    await this.sendMessage(BTN.GB_50)
+    await this.sendMessage(trafficButtons[0])
     msg = await this.waitForMessage()
     const text = msg.text || msg.message || ''
-    console.log('[ШАГ 8] TON VPN ответил:', text)
+    console.log('[ШАГ 9] TON VPN ответил:', text)
 
     const ssconfKey = this.extractKey(text)
     console.log('\n[РЕЗУЛЬТАТ] Ключ:', ssconfKey)
