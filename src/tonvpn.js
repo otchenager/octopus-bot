@@ -12,7 +12,6 @@ const BTN = {
   RUSSIA_RESIDENT: '🇷🇺Для жителей России',
   OUTLINE: 'Outline',
   UDP: 'UDP',
-  GB_50: '50 ГБ / 0.99 $',
 }
 
 const PERIOD_MAP = {
@@ -55,8 +54,8 @@ class TonVpnClient {
       { connectionRetries: 5 }
     )
     this.connected = false
-    // Serializes all getKey calls so only one GramJS flow runs at a time
-    this.queue = Promise.resolve()
+    this.busy = false
+    this.queue = []
   }
 
   async connect() {
@@ -96,32 +95,67 @@ class TonVpnClient {
     })
   }
 
-  // Universal: tries inline button first, falls back to sending text
-  async clickButton(message, buttonText) {
-    const rows = message.replyMarkup?.rows || []
+  async clickInlineButton(msg, buttonText) {
+    const rows = msg.replyMarkup?.rows || []
+
+    console.log('  [BUTTONS AVAILABLE]:')
     for (const row of rows) {
       for (const btn of row.buttons) {
-        if (btn.text && btn.text.includes(buttonText)) {
-          console.log(`[CLICK] Inline button: "${btn.text}"`)
-          await message.click({ text: btn.text })
-          return true
+        console.log(`    "${btn.text}" | data type: ${typeof btn.data} | data: ${JSON.stringify(btn.data)}`)
+      }
+    }
+
+    for (const row of rows) {
+      for (const btn of row.buttons) {
+        if (btn.text?.includes(buttonText)) {
+          console.log(`  [CLICK] Found: "${btn.text}"`)
+
+          if (btn.data && btn.data.length > 0) {
+            console.log('  [CLICK] Clicking by Buffer data')
+            await msg.click({ data: btn.data })
+          } else {
+            console.log('  [CLICK] No data, fallback to text click')
+            try {
+              await msg.click({ text: btn.text })
+            } catch (e) {
+              console.log('  [CLICK] Text click failed, fallback to sendMessage')
+              await this.sendMessage(btn.text)
+            }
+          }
+
+          await this.sleep(500)
+          return
         }
       }
     }
-    console.log(`[CLICK] Fallback text: "${buttonText}"`)
-    await this.sendMessage(buttonText)
-    return false
+
+    const available = rows.flatMap(r => r.buttons.map(b => b.text))
+    throw new Error(`Button "${buttonText}" not found. Available: ${JSON.stringify(available)}`)
   }
 
   async sendMessage(text) {
     await this.client.sendMessage(TON_VPN_BOT, { message: text })
   }
 
-  // Public entry point — queues requests so GramJS flows don't interleave
-  getKey(country, period) {
-    const result = this.queue.then(() => this._getKey(country, period))
-    this.queue = result.catch(() => {})
-    return result
+  async getKey(country, period) {
+    return new Promise((resolve, reject) => {
+      this.queue.push({ country, period, resolve, reject })
+      this.processQueue()
+    })
+  }
+
+  async processQueue() {
+    if (this.busy || this.queue.length === 0) return
+    this.busy = true
+    const { country, period, resolve, reject } = this.queue.shift()
+    try {
+      resolve(await this._getKey(country, period))
+    } catch (err) {
+      reject(err)
+    } finally {
+      this.busy = false
+      this.processQueue()
+    }
   }
 
   async _getKey(country, period) {
@@ -137,63 +171,73 @@ class TonVpnClient {
     console.log('Страна:', country, '→', countryBtn)
     console.log('Период:', period, '→', periodBtn)
 
-    // Step 1: /start → welcome text only
+    // Step 1: /start → welcome text only (ReplyKeyboard)
     console.log('\n[ШАГ 1] Отправляем /start')
     await this.sendMessage('/start')
     let msg = await this.waitForMessage()
     console.log('[ШАГ 1] Приветствие:', msg.text?.slice(0, 60))
 
-    // Step 2: nudge to trigger ReplyKeyboard menu
+    // Step 2: nudge to trigger ReplyKeyboard menu (ReplyKeyboard)
     await this.sleep(800)
     console.log('\n[ШАГ 2] Отправляем "Привет" для вызова меню')
     await this.sendMessage('Привет')
     msg = await this.waitForMessage()
     console.log('[ШАГ 2] Меню. Кнопки:', this.getButtons(msg))
 
-    // Step 3: ReplyKeyboard → registration
+    // Step 3: registration (ReplyKeyboard)
     await this.sleep(800)
     console.log('\n[ШАГ 3] Отправляем: "' + BTN.REGISTER + '"')
     await this.sendMessage(BTN.REGISTER)
     msg = await this.waitForMessage()
     console.log('[ШАГ 3] TON VPN ответил:', msg.text?.slice(0, 80))
 
-    // Steps 4-8: send button text directly (message.click() unreliable for this bot)
+    // Steps 4-8: inline buttons — click by Buffer data
     await this.sleep(800)
-    console.log('\n[ШАГ 4] Отправляем: "' + BTN.RUSSIA_RESIDENT + '"')
-    await this.sendMessage(BTN.RUSSIA_RESIDENT)
+    console.log('\n[ШАГ 4] clickInlineButton: "' + BTN.RUSSIA_RESIDENT + '"')
+    await this.clickInlineButton(msg, 'Для жителей России')
     msg = await this.waitForMessage()
     console.log('[ШАГ 4] TON VPN ответил:', msg.text?.slice(0, 80))
 
     await this.sleep(800)
-    console.log('\n[ШАГ 5] Отправляем: "' + BTN.OUTLINE + '"')
-    await this.sendMessage(BTN.OUTLINE)
+    console.log('\n[ШАГ 5] clickInlineButton: "' + BTN.OUTLINE + '"')
+    await this.clickInlineButton(msg, BTN.OUTLINE)
     msg = await this.waitForMessage()
     console.log('[ШАГ 5] TON VPN ответил:', msg.text?.slice(0, 80))
 
     await this.sleep(800)
-    console.log('\n[ШАГ 6] Отправляем: "' + BTN.UDP + '"')
-    await this.sendMessage(BTN.UDP)
+    console.log('\n[ШАГ 6] clickInlineButton: "' + BTN.UDP + '"')
+    await this.clickInlineButton(msg, BTN.UDP)
     msg = await this.waitForMessage()
     console.log('[ШАГ 6] TON VPN ответил:', msg.text?.slice(0, 80))
 
     await this.sleep(800)
-    console.log('\n[ШАГ 7] Отправляем: "' + countryBtn + '"')
-    await this.sendMessage(countryBtn)
+    console.log('\n[ШАГ 7] clickInlineButton: "' + countryBtn + '"')
+    await this.clickInlineButton(msg, countryBtn)
     msg = await this.waitForMessage()
     console.log('[ШАГ 7] TON VPN ответил:', msg.text?.slice(0, 80))
 
     await this.sleep(800)
-    console.log('\n[ШАГ 8] Отправляем: "' + periodBtn + '"')
-    await this.sendMessage(periodBtn)
+    console.log('\n[ШАГ 8] clickInlineButton: "' + periodBtn + '"')
+    await this.clickInlineButton(msg, periodBtn)
     msg = await this.waitForMessage()
     console.log('[ШАГ 8] TON VPN ответил:', msg.text?.slice(0, 80))
 
-    // Step 9: traffic — pick first available option (price varies by period)
-    const trafficButtons = this.getButtons(msg)
-    console.log('\n[ШАГ 9] Доступные варианты трафика:', trafficButtons)
-    if (!trafficButtons.length) throw new Error('No traffic buttons in: ' + (msg.text || ''))
-    await this.sleep(800)
-    await this.sendMessage(trafficButtons[0])
+    // Step 9: traffic — click first available option by Buffer data (price varies by period)
+    const rows = msg.replyMarkup?.rows || []
+    const trafficBtns = rows.flatMap(r => r.buttons)
+    console.log('\n[ШАГ 9] Доступные варианты трафика:', trafficBtns.map(b => b.text))
+    if (!trafficBtns.length) throw new Error('No traffic buttons in: ' + (msg.text || ''))
+
+    const trafficBtn = trafficBtns[0]
+    console.log('[ШАГ 9] Выбираем: "' + trafficBtn.text + '"')
+    if (trafficBtn.data && trafficBtn.data.length > 0) {
+      console.log('[ШАГ 9] Clicking by Buffer data')
+      await msg.click({ data: trafficBtn.data })
+    } else {
+      console.log('[ШАГ 9] No data, clicking by text')
+      await msg.click({ text: trafficBtn.text })
+    }
+    await this.sleep(500)
     msg = await this.waitForMessage()
     const text = msg.text || msg.message || ''
     console.log('[ШАГ 9] TON VPN ответил:', text)
