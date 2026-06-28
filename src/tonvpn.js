@@ -111,43 +111,23 @@ class TonVpnClient {
   async clickInlineButton(msg, buttonText) {
     const rows = msg.replyMarkup?.rows || []
 
-    console.log('  [AVAILABLE BUTTONS]:')
-    for (const row of rows) {
-      for (const btn of row.buttons) {
-        try {
-          const raw = btn.data?.data ?? btn.data
-          const command = raw ? Buffer.from(raw).toString('utf8') : 'NO_DATA'
-          console.log(`    "${btn.text}" → "${command}"`)
-        } catch(e) {
-          console.log(`    "${btn.text}" → decode error: ${e.message}`)
-        }
-      }
-    }
-
     for (const row of rows) {
       for (const btn of row.buttons) {
         if (btn.text?.includes(buttonText)) {
-          try {
-            const raw = btn.data?.data ?? btn.data
-            const command = Buffer.from(raw).toString('utf8')
-            console.log(`  [SEND] "${btn.text}" → sendMessage("${command}")`)
-            const responsePromise = this.waitForMessage()
-            await this.sendMessage(command)
-            await this.sleep(800)
-            return responsePromise
-          } catch(e) {
-            console.log(`  [FALLBACK] decode failed, sending text: "${btn.text}"`)
-            const responsePromise = this.waitForMessage()
-            await this.sendMessage(btn.text)
-            await this.sleep(800)
-            return responsePromise
-          }
+          const raw = btn.data?.data ?? btn.data
+          const dataBuffer = Buffer.isBuffer(raw) ? raw : Buffer.from(raw)
+
+          console.log(`[CLICK] "${btn.text}" | data length: ${dataBuffer.length}`)
+
+          const nextMessage = this.waitForMessage()
+          await msg.click({ data: dataBuffer })
+          await this.sleep(500)
+          return nextMessage
         }
       }
     }
 
-    const available = rows.flatMap(r => r.buttons.map(b => b.text))
-    throw new Error(`Button "${buttonText}" not found. Available: ${JSON.stringify(available)}`)
+    throw new Error('Button not found: ' + buttonText)
   }
 
   async sendMessage(text) {
