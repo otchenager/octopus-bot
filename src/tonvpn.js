@@ -2,7 +2,7 @@ require('dotenv').config()
 
 const { TelegramClient } = require('telegram')
 const { StringSession } = require('telegram/sessions')
-const { NewMessage } = require('telegram/events')
+const { NewMessage, EditedMessage } = require('telegram/events')
 
 const TON_VPN_BOT = '@TonVPN_bot'
 const BOT_USERNAME = 'tonvpn_bot'
@@ -69,29 +69,34 @@ class TonVpnClient {
   waitForMessage(timeout = 30000) {
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
-        this.client.removeEventHandler(handler)
+        this.client.removeEventHandler(newHandler)
+        this.client.removeEventHandler(editHandler)
         reject(new Error('TON VPN timeout'))
       }, timeout)
 
-      const handler = async (event) => {
+      const resolve_once = (msg) => {
+        clearTimeout(timer)
+        this.client.removeEventHandler(newHandler)
+        this.client.removeEventHandler(editHandler)
+        resolve(msg)
+      }
+
+      const checkSender = async (event) => {
         try {
           const msg = event.message
           const sender = await msg.getSender()
-          console.log('Incoming message from:', sender?.username, '| text:', msg.text?.slice(0, 50))
-          const isTonVpn = sender?.username?.toLowerCase() === BOT_USERNAME
-            || msg.text?.includes('Регистрация нового пользователя')
-            || msg.text?.includes('Добро пожаловать')
-          if (isTonVpn) {
-            clearTimeout(timer)
-            this.client.removeEventHandler(handler)
-            resolve(msg)
+          if (sender?.username?.toLowerCase() === BOT_USERNAME) {
+            console.log('Incoming (new/edit) from tonvpn_bot | text:', msg.text?.slice(0, 60))
+            resolve_once(msg)
           }
-        } catch (_) {
-          // ignore errors from irrelevant messages
-        }
+        } catch(_) {}
       }
 
-      this.client.addEventHandler(handler, new NewMessage({}))
+      const newHandler = async (event) => checkSender(event)
+      const editHandler = async (event) => checkSender(event)
+
+      this.client.addEventHandler(newHandler, new NewMessage({}))
+      this.client.addEventHandler(editHandler, new EditedMessage({}))
     })
   }
 
