@@ -2,7 +2,13 @@ require('dotenv').config()
 
 const { TelegramClient } = require('telegram')
 const { StringSession } = require('telegram/sessions')
-const { NewMessage, EditedMessage } = require('telegram/events')
+const { NewMessage } = require('telegram/events')
+let EditedMessage
+try {
+  EditedMessage = require('telegram/events').EditedMessage
+} catch(e) {
+  console.log('EditedMessage not available, using NewMessage only')
+}
 
 const TON_VPN_BOT = '@TonVPN_bot'
 const BOT_USERNAME = 'tonvpn_bot'
@@ -96,7 +102,9 @@ class TonVpnClient {
       const editHandler = async (event) => checkSender(event)
 
       this.client.addEventHandler(newHandler, new NewMessage({}))
-      this.client.addEventHandler(editHandler, new EditedMessage({}))
+      if (EditedMessage) {
+        this.client.addEventHandler(editHandler, new EditedMessage({}))
+      }
     })
   }
 

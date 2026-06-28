@@ -226,9 +226,10 @@ bot.action(/^tariff_(classic|max)$/, async (ctx) => {
 bot.action('confirm_payment', async (ctx) => {
   await ctx.answerCbQuery()
   const sess = getSession(ctx.from.id)
-  const { client, country, period, tariff } = sess
+  const { client, country, period } = sess
+  const tariff = sess.tariff || 'classic'
   const plan = PLANS[period]
-  const price = plan[tariff]
+  const price = plan[tariff] || plan.classic
 
   const user = await getOrCreateUser(ctx.from.id, ctx.from.username)
 
