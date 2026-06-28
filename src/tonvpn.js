@@ -121,6 +121,22 @@ class TonVpnClient {
 
           const nextMessage = this.waitForMessage()
           await msg.click({ data: dataBuffer })
+
+          const debugAll = async (event) => {
+            try {
+              const m = event.message
+              const s = await m.getSender()
+              console.log('[DEBUG ALL MSG]', s?.username || s?.id, '|', m.text?.slice(0, 80))
+            } catch(e) {
+              console.log('[DEBUG ALL MSG ERROR]', e.message)
+            }
+          }
+          this.client.addEventHandler(debugAll, new NewMessage({}))
+          setTimeout(() => this.client.removeEventHandler(debugAll), 15000)
+
+          await this.sleep(5000)
+          console.log('[CLICK DONE] Waiting finished')
+
           await this.sleep(500)
           return nextMessage
         }
