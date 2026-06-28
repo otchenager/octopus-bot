@@ -177,22 +177,25 @@ class TonVpnClient {
 
     // Step 1: /start → welcome text only (ReplyKeyboard)
     console.log('\n[ШАГ 1] Отправляем /start')
+    let nextMsg = this.waitForMessage()
     await this.sendMessage('/start')
-    let msg = await this.waitForMessage()
+    let msg = await nextMsg
     console.log('[ШАГ 1] Приветствие:', msg.text?.slice(0, 60))
 
     // Step 2: nudge to trigger ReplyKeyboard menu (ReplyKeyboard)
     await this.sleep(800)
     console.log('\n[ШАГ 2] Отправляем "Привет" для вызова меню')
+    nextMsg = this.waitForMessage()
     await this.sendMessage('Привет')
-    msg = await this.waitForMessage()
+    msg = await nextMsg
     console.log('[ШАГ 2] Меню. Кнопки:', this.getButtons(msg))
 
     // Step 3: registration (ReplyKeyboard)
     await this.sleep(800)
     console.log('\n[ШАГ 3] Отправляем: "' + BTN.REGISTER + '"')
+    nextMsg = this.waitForMessage()
     await this.sendMessage(BTN.REGISTER)
-    msg = await this.waitForMessage()
+    msg = await nextMsg
     console.log('[ШАГ 3] Response:', msg.text?.slice(0, 60))
 
     // Step 4: country of residence — skipped for already-registered users
