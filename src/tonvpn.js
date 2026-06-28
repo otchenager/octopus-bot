@@ -69,6 +69,31 @@ class TonVpnClient {
       await this.client.connect()
       this.connected = true
       console.log('GramJS connected')
+
+      this.client.addEventHandler(async (event) => {
+        try {
+          const msg = event.message
+          const sender = await msg.getSender()
+          if (sender?.username?.toLowerCase() !== BOT_USERNAME) return
+
+          console.log('\n=== TON VPN INCOMING ===')
+          console.log('text:', msg.text)
+          console.log('replyMarkup type:', msg.replyMarkup?.className)
+
+          if (msg.replyMarkup?.rows) {
+            for (const row of msg.replyMarkup.rows) {
+              for (const btn of row.buttons) {
+                const raw = btn.data?.data ?? btn.data
+                const decoded = raw ? Buffer.from(raw).toString('utf8') : 'NO_DATA'
+                console.log(`  [${btn.className}] "${btn.text}" → "${decoded}"`)
+              }
+            }
+          } else {
+            console.log('replyMarkup:', JSON.stringify(msg.replyMarkup))
+          }
+          console.log('=== END ===\n')
+        } catch(e) {}
+      }, new NewMessage({}))
     }
   }
 
