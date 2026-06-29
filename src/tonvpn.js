@@ -135,39 +135,36 @@ class TonVpnClient {
   async clickInlineButton(msg, buttonText) {
     const rows = msg.replyMarkup?.rows || []
 
+    // Verify button exists in the passed message first
+    let found = false
     for (const row of rows) {
       for (const btn of row.buttons) {
+        if (btn.text?.includes(buttonText)) { found = true; break }
+      }
+      if (found) break
+    }
+    if (!found) throw new Error('Button not found: ' + buttonText)
+
+    // Fetch fresh message from chat history to get a live clickable message
+    const history = await this.client.getMessages(TON_VPN_BOT, { limit: 3 })
+    const freshMsg = history.find(m => m.replyMarkup?.rows?.length > 0)
+
+    if (!freshMsg) throw new Error('No message with buttons found in history')
+
+    console.log('[FRESH] msgId:', freshMsg.id, 'text:', freshMsg.text?.slice(0, 50))
+
+    for (const row of freshMsg.replyMarkup.rows) {
+      for (const btn of row.buttons) {
         if (btn.text?.includes(buttonText)) {
-          const raw = btn.data?.data ?? btn.data
-          const dataBuffer = Buffer.isBuffer(raw) ? raw : Buffer.from(raw)
-
-          console.log(`[CLICK] "${btn.text}" | data length: ${dataBuffer.length}`)
-
-          const nextMessage = this.waitForMessage()
-          await msg.click({ data: dataBuffer })
-
-          const debugAll = async (event) => {
-            try {
-              const m = event.message
-              const s = await m.getSender()
-              console.log('[DEBUG ALL MSG]', s?.username || s?.id, '|', m.text?.slice(0, 80))
-            } catch(e) {
-              console.log('[DEBUG ALL MSG ERROR]', e.message)
-            }
-          }
-          this.client.addEventHandler(debugAll, new NewMessage({}))
-          setTimeout(() => this.client.removeEventHandler(debugAll), 15000)
-
-          await this.sleep(5000)
-          console.log('[CLICK DONE] Waiting finished')
-
-          await this.sleep(500)
-          return nextMessage
+          console.log(`[CLICK] "${btn.text}" | msgId: ${freshMsg.id}`)
+          const nextMsg = this.waitForMessage()
+          await freshMsg.click({ data: btn.data })
+          return nextMsg
         }
       }
     }
 
-    throw new Error('Button not found: ' + buttonText)
+    throw new Error('Button not found in fresh message: ' + buttonText)
   }
 
   async sendMessage(text) {
