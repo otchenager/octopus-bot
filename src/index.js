@@ -269,16 +269,18 @@ bot.action('confirm_payment', async (ctx) => {
     const ssconfKey = await tonvpn.getKey(country, period)
     countdownDone = true
 
+    const cleanKey = ssconfKey.replace(/`/g, '').trim()
+
     let finalKey
     let appName
     let instruction
 
     if (client === 'happ') {
-      finalKey = await ssconfToSs(ssconfKey)
+      finalKey = await ssconfToSs(cleanKey)
       appName = 'Happ'
       instruction = 'Откройте Happ → нажмите + → Из буфера → вставьте ключ'
     } else {
-      finalKey = ssconfKey
+      finalKey = cleanKey
       appName = 'Outline'
       instruction = 'Откройте Outline → нажмите + → вставьте ключ из буфера'
     }
@@ -286,14 +288,13 @@ bot.action('confirm_payment', async (ctx) => {
     const remaining = updatedUser.balance
     await ctx.telegram.editMessageText(
       ctx.chat.id, countdownMsg.message_id, null,
-      `✅ *Ваш ключ активирован!*\n\n` +
-      `Страна: ${country}\n` +
-      `Срок: ${plan.label}\n` +
-      `Приложение: ${appName}\n` +
-      `💎 Остаток: ${fmtBoth(remaining)}\n\n` +
-      `🔑 *Ваш ключ:*\n\`${finalKey}\`\n\n` +
-      `📱 *Как подключиться:*\n${instruction}`,
-      { parse_mode: 'Markdown' }
+      '✅ Ваш ключ активирован!\n\n' +
+      'Страна: ' + country + '\n' +
+      'Срок: ' + plan.label + '\n' +
+      'Приложение: ' + appName + '\n' +
+      '💎 Остаток: $' + remaining.toFixed(2) + ' (~' + Math.round(remaining * 78) + ' ₽)\n\n' +
+      '🔑 Ваш ключ:\n' + finalKey + '\n\n' +
+      '📱 Как подключиться:\n' + instruction
     )
 
     delete sessions[ctx.from.id]
@@ -303,8 +304,7 @@ bot.action('confirm_payment', async (ctx) => {
     console.error('Key error:', err)
     await ctx.telegram.editMessageText(
       ctx.chat.id, countdownMsg.message_id, null,
-      '❌ Ошибка при получении ключа. Обратитесь в поддержку: @octopus\\_support',
-      { parse_mode: 'Markdown' }
+      '❌ Ошибка при получении ключа. Обратитесь в поддержку: @otchenager'
     )
   }
 })
