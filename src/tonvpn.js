@@ -70,13 +70,23 @@ class TonVpnClient {
       this.connected = true
       console.log('GramJS connected')
 
-      this.client.addEventHandler(async (event) => {
+      let GlobalEditedMessage
+      try {
+        GlobalEditedMessage = require('telegram/events/EditedMessage').EditedMessage
+      } catch(e) {}
+      if (!GlobalEditedMessage) {
+        try {
+          GlobalEditedMessage = require('telegram/events').EditedMessage
+        } catch(e) {}
+      }
+
+      const logHandler = async (event) => {
         try {
           const msg = event.message
           const sender = await msg.getSender()
           if (sender?.username?.toLowerCase() !== BOT_USERNAME) return
 
-          console.log('\n=== TON VPN INCOMING ===')
+          console.log('\n=== TON VPN INCOMING (type: ' + event.constructor.name + ') ===')
           console.log('text:', msg.text)
           console.log('replyMarkup type:', msg.replyMarkup?.className)
 
@@ -93,7 +103,15 @@ class TonVpnClient {
           }
           console.log('=== END ===\n')
         } catch(e) {}
-      }, new NewMessage({}))
+      }
+
+      this.client.addEventHandler(logHandler, new NewMessage({}))
+      if (GlobalEditedMessage) {
+        this.client.addEventHandler(logHandler, new GlobalEditedMessage({}))
+        console.log('EditedMessage handler added')
+      } else {
+        console.log('EditedMessage not available in this GramJS version')
+      }
     }
   }
 
