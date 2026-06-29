@@ -1,8 +1,12 @@
 require('dotenv').config()
 const { Telegraf, Markup } = require('telegraf')
+const fetch = require('node-fetch')
 const tonvpn = require('./tonvpn')
 const { ssconfToSs } = require('./converter')
-const { getOrCreateUser, deductBalance, getBalance, USD_TO_RUB } = require('./db')
+const { getOrCreateUser, deductBalance, addBalance, getBalance, USD_TO_RUB } = require('./db')
+
+const YOOMONEY_TOKEN = process.env.YOOMONEY_TOKEN
+const YOOMONEY_WALLET = '4100119060879391'
 
 const bot = new Telegraf('8686816041:AAGZ8qCE_eWWuqdiH6yZ2f0DotRik7BgGvE')
 
@@ -88,9 +92,76 @@ bot.hears('💎 Баланс', async (ctx) => {
   )
 })
 
-bot.action(/^topup_\d+$/, async (ctx) => {
+bot.action(/^topup_(\d+)$/, async (ctx) => {
   await ctx.answerCbQuery()
-  await ctx.reply('💳 Оплата через СБП скоро будет доступна. Следите за обновлениями!')
+  const amount = parseInt(ctx.match[1])
+  const label = ctx.from.id.toString()
+  const payUrl = `https://yoomoney.ru/quickpay/confirm?receiver=${YOOMONEY_WALLET}&quickpay-form=button&sum=${amount}&label=${label}&successURL=https://t.me/octopus_keysvpn_core_bot`
+
+  await ctx.reply(
+    '💳 Оплата через YooMoney\n\nНажмите кнопку ниже для перехода на страницу оплаты:',
+    Markup.inlineKeyboard([
+      [Markup.button.url('💳 Оплатить ' + amount + ' ₽', payUrl)]
+    ])
+  )
+  await ctx.reply(
+    'После оплаты нажмите кнопку ниже:',
+    Markup.inlineKeyboard([
+      [Markup.button.callback('✅ Я оплатил', 'check_payment_' + amount)]
+    ])
+  )
+})
+
+async function checkYooMoneyPayment(telegramId, expectedAmount) {
+  const response = await fetch('https://yoomoney.ru/api/operation-history', {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer ' + YOOMONEY_TOKEN,
+      'Content-Type': 'application/x-www-form-urlencoded'
+    },
+    body: 'label=' + telegramId + '&operation_types=deposition'
+  })
+  const data = await response.json()
+
+  const now = Date.now()
+  const payment = data.operations?.find(op =>
+    op.label === telegramId.toString() &&
+    op.amount >= expectedAmount &&
+    (now - new Date(op.datetime).getTime()) < 30 * 60 * 1000
+  )
+
+  return payment || null
+}
+
+bot.action(/^check_payment_(\d+)$/, async (ctx) => {
+  await ctx.answerCbQuery()
+  const amount = parseInt(ctx.match[1])
+  const telegramId = ctx.from.id
+
+  await ctx.reply('🔍 Проверяем платёж...')
+
+  const payment = await checkYooMoneyPayment(telegramId, amount)
+
+  if (payment) {
+    const dollars = amount / USD_TO_RUB
+    await addBalance(telegramId, dollars)
+    const user = await getOrCreateUser(telegramId, ctx.from.username)
+    const newBalance = user.balance
+    await ctx.reply(
+      '✅ Баланс пополнен!\n\n' +
+      'Пополнено: ' + amount + ' ₽ (~$' + dollars.toFixed(2) + ')\n' +
+      '💎 Новый баланс: $' + newBalance.toFixed(2) + ' (~' + Math.round(newBalance * USD_TO_RUB) + ' ₽)'
+    )
+  } else {
+    await ctx.reply(
+      '❌ Платёж не найден.\n\n' +
+      'Убедитесь что:\n' +
+      '• Перевод выполнен на кошелёк ' + YOOMONEY_WALLET + '\n' +
+      '• Сумма точная: ' + amount + ' ₽\n' +
+      '• Прошло не более 30 минут\n\n' +
+      'Попробуйте через минуту.'
+    )
+  }
 })
 
 bot.action('goto_balance', async (ctx) => {
