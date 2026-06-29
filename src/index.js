@@ -314,6 +314,15 @@ bot.action('confirm_payment', async (ctx) => {
 // ─────────────────────────────────────
 bot.launch()
 console.log('🐙 Octopus Bot v2 started!')
+// Подключаем GramJS сразу при старте
+tonvpn.connect().then(() => {
+  console.log('GramJS ready — listening to TON VPN')
+}).catch(err => {
+  console.error('GramJS connect error:', err)
+})
+//залупа коня бадулая
+
+
 
 process.once('SIGINT', () => bot.stop('SIGINT'))
 process.once('SIGTERM', () => bot.stop('SIGTERM'))

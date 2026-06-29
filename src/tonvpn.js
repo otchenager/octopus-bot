@@ -104,7 +104,6 @@ class TonVpnClient {
         this.client.removeEventHandler(editHandler)
         reject(new Error('TON VPN timeout'))
       }, timeout)
-
       const resolve_once = (msg) => {
         clearTimeout(timer)
         this.client.removeEventHandler(newHandler)
