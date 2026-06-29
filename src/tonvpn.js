@@ -194,66 +194,52 @@ class TonVpnClient {
     await this.connect()
 
     const countryCode = COUNTRY_CODES[country]
-    if (!countryCode) throw new Error('Unknown country: ' + country)
-
     const periodCode = PERIOD_CODES[period]
-    if (!periodCode) throw new Error('Unknown period: ' + period)
 
-    console.log('\n=== GETTING KEY ===')
     console.log('Country:', country, '->', countryCode)
     console.log('Period:', period, '->', periodCode)
 
-    // Step 1: /start + trigger menu
+    // Step 1: trigger menu
     await this.sendMessage('/start')
-    await this.waitForNewMessage()
-    await this.sleep(500)
+    await this.sleep(1500)
     await this.sendMessage('Привет')
-    await this.waitForNewMessage()
-    await this.sleep(500)
+    await this.sleep(1500)
 
-    // Step 2: Registration
+    // Step 2: registration
     await this.sendMessage('🧞‍♂️Регистрация нового пользователя')
-    const step2 = await this.waitForNewMessage()
-    await this.sleep(500)
+    await this.sleep(1500)
 
-    // Step 3: Country of residence (may be skipped for existing users)
-    if (step2.text?.includes('страну проживания')) {
-      await this.sendMessage('/resident_in-russia')
-      await this.waitForEditedMessage()
-      await this.sleep(500)
-    }
+    // Step 3: country of residence
+    await this.sendMessage('/resident_in-russia')
+    await this.sleep(1500)
 
-    // Step 4: Protocol (Outline)
+    // Step 4: protocol
     await this.sendMessage('/choose_port_type-russia-outline')
-    await this.waitForEditedMessage()
-    await this.sleep(500)
+    await this.sleep(1500)
 
-    // Step 5: Port (UDP)
+    // Step 5: port
     await this.sendMessage('/new_client_setup-russia-outline-udp')
-    await this.waitForEditedMessage()
-    await this.sleep(500)
+    await this.sleep(1500)
 
-    // Step 6: Server country
+    // Step 6: server country
     await this.sendMessage(`/get_access_key_plan_type-${countryCode}-russia-outline-udp`)
-    await this.waitForEditedMessage()
-    await this.sleep(500)
+    await this.sleep(1500)
 
-    // Step 7: Period
+    // Step 7: period
     await this.sendMessage(`/get_access_key_plan-${periodCode}-${countryCode}-russia-outline-udp`)
-    await this.waitForEditedMessage()
-    await this.sleep(500)
+    await this.sleep(1500)
 
-    // Step 8: Traffic — always minimum (50GB)
+    // Step 8: minimum traffic
     await this.sendMessage(`/create_access_key-1-${countryCode}-russia-outline-udp`)
 
-    // Wait for key message (NewMessage with ssconf://)
-    const keyMsg = await this.waitForNewMessage(15000)
+    // Wait for final key message
+    const keyMsg = await this.waitForNewMessage(20000)
     console.log('[KEY MSG]', keyMsg.text)
 
     const ssconfKey = this.extractKey(keyMsg.text || '')
     if (!ssconfKey) throw new Error('Key not found in: ' + keyMsg.text)
 
-    console.log('=== KEY RECEIVED:', ssconfKey, '===')
+    console.log('KEY:', ssconfKey)
     return ssconfKey
   }
 
